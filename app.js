@@ -56,17 +56,6 @@ students.forEach((student) => {
 });
 let attendance = load(LS.att, {}); // {"tarikh|sesi": {id: {masa, kaedah}}}
 if (!attendance || typeof attendance !== 'object' || Array.isArray(attendance)) attendance = {};
-Object.keys(attendance).forEach((key) => {
-  if (!key.includes('|') || key.endsWith('|-')) return;
-  const [date] = key.split('|');
-  const targetKey = `${date}|-`;
-  attendance[targetKey] = { ...(attendance[targetKey] || {}) };
-  Object.entries(attendance[key] || {}).forEach(([id, record]) => {
-    if (!attendance[targetKey][id]) attendance[targetKey][id] = record;
-  });
-  delete attendance[key];
-});
-saveAtt();
 
 let modelsReady = false;
 let stream = null;
@@ -310,7 +299,7 @@ function beep(frequency = 880) {
 }
 
 /* ---------------- Rekod kehadiran ---------------- */
-const attKey = () => `${sanitize($('fDate').value || todayStr(), 10)}|-`;
+const attKey = () => `${sanitize($('fDate').value || todayStr(), 10)}|${sanitize($('fSesi').value, 60) || '-'}`;
 function currentAtt() {
   const k = attKey();
   if (!attendance[k]) attendance[k] = {};
@@ -359,9 +348,6 @@ function renderAttendance() {
   const present = current.filter((s) => rec[s.id]).length;
   const lateToday = current.filter((s) => rec[s.id] && isLate(rec[s.id].masa)).length;
   $('cntLate').textContent = lateToday;
-  $('cntPresent').textContent = present;
-  $('cntAbsent').textContent = current.length - present;
-  $('cntTotal').textContent = current.length;
   $('attEmpty').hidden = current.length > 0;
 
   const levels = new Map();
@@ -385,11 +371,6 @@ function renderAttendance() {
   }) : activeStudents().filter((s) => revealedLateStudents.has(s.id) && !!rec[s.id] && isLate(rec[s.id].masa));
   $('attResults').hidden = visible.length === 0 && !searching;
   $('attEmpty').hidden = visible.length > 0;
-  if (!visible.length) {
-    $('attEmpty').innerHTML = !attNameSearch && !attClassSearch
-      ? 'Tiada murid lewat yang berjaya diimbas pada tarikh dipilih.'
-      : 'Tiada murid sepadan dengan carian.';
-  }
 
   list.innerHTML = visible.map((s, index) => {
       const r = rec[s.id];
@@ -889,38 +870,17 @@ function buildRecords() {
 function exportPdf() {
   if (!activeStudents().length) return toast('Tiada murid untuk dieksport.', 'err');
   const tarikh = $('fDate').value || todayStr();
+  const sesi = ($('fSesi').value || '').trim();
   const rows = buildRecords().filter((r) => r.lewat === 'Lewat');
   if (!rows.length) return toast('Tiada rekod lewat untuk dieksport.', 'err');
   $('pdfReport').innerHTML = `
     <h1>Laporan Murid Lewat</h1>
-    <p>Tarikh: ${esc(tarikh)}</p>
+    <p>Tarikh: ${esc(tarikh)}${sesi ? ` · Hari: ${esc(sesi)}` : ''}</p>
     <table>
       <thead><tr><th>Bil</th><th>Nama</th><th>Kelas</th><th>Masa</th><th>Kali Lewat</th><th>Kesalahan</th></tr></thead>
       <tbody>${rows.map((r) => `<tr><td>${r.bil}</td><td>${esc(r.nama)}</td><td>${esc(r.kelas)}</td><td>${esc(r.masa)}</td><td>${r.kaliLewat || ''}</td><td>${esc(r.kesalahan)}</td></tr>`).join('')}</tbody>
     </table>`;
   window.print();
-}
-
-function exportCsv() {
-  if (!activeStudents().length) return toast('Tiada murid untuk dieksport.', 'err');
-  const tarikh = $('fDate').value || todayStr();
-  const csvSafe = (v) => {
-    let text = String(v);
-    if (/^[=+@-]/.test(text)) text = "'" + text;
-    return `"${text.replace(/"/g, '""')}"`;
-  };
-  const lines = [['Tarikh', 'Sesi', 'Kelas', 'Bil', 'Nama', 'Status', 'Masa', 'Kaedah', 'Lewat', 'Kali Lewat', 'Kesalahan'].map(csvSafe).join(',')];
-  buildRecords().forEach((r) => {
-    lines.push([tarikh, '', r.kelas, r.bil, r.nama, r.status, r.masa, r.kaedah, r.lewat, r.kaliLewat || '', r.kesalahan].map(csvSafe).join(','));
-  });
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `kehadiran_${tarikh}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 
 function updateStorageInfo() {
@@ -936,15 +896,11 @@ function updateStorageInfo() {
 }
 
 function monthlyLateReport() {
-  return dailyLateReport();
-}
-
-function dailyLateReport() {
-  const date = ($('reportDate').value || $('fDate').value || todayStr());
+  const month = ($('reportMonth').value || todayStr().slice(0, 7));
   const summary = new Map();
   Object.entries(attendance).forEach(([key, records]) => {
     const tarikh = key.split('|')[0];
-    if (tarikh !== date) return;
+    if (!tarikh.startsWith(month)) return;
     Object.entries(records || {}).forEach(([id, record]) => {
       if (!record || !isLate(record.masa)) return;
       const student = students.find((s) => s.id === id);
@@ -967,28 +923,15 @@ function renderLateReport() {
 function exportLateReport() {
   const rows = monthlyLateReport();
   if (!rows.length) return toast('Tiada rekod lewat untuk dieksport.', 'err');
-  const date = $('reportDate').value || todayStr();
+  const bulan = $('reportMonth').value || todayStr().slice(0, 7);
   $('pdfReport').innerHTML = `
-    <h1>Laporan Lewat Harian</h1>
-    <p>Tarikh: ${esc(date)}</p>
+    <h1>Laporan Lewat Bulanan</h1>
+    <p>Bulan: ${esc(bulan)}</p>
     <table>
       <thead><tr><th>Bil</th><th>Nama</th><th>Kelas</th><th>Kali Lewat</th><th>Kategori</th><th>Tarikh dan Masa</th></tr></thead>
       <tbody>${rows.map((r, index) => `<tr><td>${index + 1}</td><td>${esc(r.nama)}</td><td>${esc(r.kelas)}</td><td>${r.kali}</td><td>${esc(r.kategori)}</td><td>${esc(r.tarikh.join(', '))}</td></tr>`).join('')}</tbody>
     </table>`;
   window.print();
-}
-
-function exportLateReportCsv() {
-  const rows = monthlyLateReport();
-  if (!rows.length) return toast('Tiada rekod lewat untuk dieksport.', 'err');
-  const date = $('reportDate').value || todayStr();
-  const lines = [['Tarikh', 'Nama', 'Kelas', 'Kali Lewat', 'Kategori', 'Masa'].join(','), ...rows.map((r) => [date, r.nama, r.kelas, r.kali, r.kategori, r.tarikh.join('; ')].map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))];
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `laporan_lewat_${date}.csv`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 2000);
 }
 
 async function sendToSheet(auto = false) {
@@ -1010,7 +953,7 @@ async function sendToSheet(auto = false) {
     token: settings.token || '',
     kelas: '',
     tarikh: $('fDate').value || todayStr(),
-    sesi: '',
+    sesi: ($('fSesi').value || '').trim(),
     rekod: buildRecords()
   };
   try {
@@ -1091,6 +1034,12 @@ $('attClassSearch').addEventListener('change', (e) => {
   renderAttendance();
 });
 $('fDate').addEventListener('change', renderAttendance);
+$('fSesi').addEventListener('input', () => {
+  settings.sesi = $('fSesi').value;
+  saveSettings();
+  renderAttendance();
+});
+
 $('attList').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-act="toggle"]');
   if (!b) return;
@@ -1180,7 +1129,6 @@ bindSetting('sAdminMinutes', 'adminMinutes', (v) => parseInt(v, 10));
 
 $('btnReportRefresh').addEventListener('click', renderLateReport);
 $('btnReportPdf').addEventListener('click', exportLateReport);
-$('btnReportCsv').addEventListener('click', exportLateReportCsv);
 
 $('btnBackup').addEventListener('click', () => {
   const backup = { version: 1, exportedAt: new Date().toISOString(), settings, students, attendance };
@@ -1289,6 +1237,7 @@ document.addEventListener('visibilitychange', () => {
 
 /* ---------------- Permulaan ---------------- */
 $('fDate').value = todayStr();
+$('fSesi').value = settings.sesi || '';
 $('sUrl').value = settings.scriptUrl || '';
 $('sToken').value = settings.token || '';
 $('sThr').value = settings.threshold;
@@ -1303,7 +1252,7 @@ $('sAdminMinutes').value = String(settings.adminMinutes || 30);
 $('sSound').checked = settings.sound !== false;
 $('sVibration').checked = settings.vibration !== false;
 $('sSpeech').checked = settings.speech !== false;
-$('reportDate').value = todayStr();
+$('reportMonth').value = todayStr().slice(0, 7);
 refreshStudentClassFilters();
 updateNet();
 renderAttendance();
