@@ -36,10 +36,6 @@
             <span class="form-label">Tarikh</span>
             <input type="date" id="fDate" />
           </label>
-          <label class="form-row">
-            <span class="form-label">Hari</span>
-            <input type="text" id="fSesi" placeholder="cth: Isnin" maxlength="60" />
-          </label>
         </div>
 
         <div class="stage" id="stageScan">
@@ -65,7 +61,10 @@
 
         <div class="summary-card">
           <div class="stats">
-            <div class="stat"><b id="cntLate" class="c-warn">0</b><small>Lewat Hari Ini</small></div>
+            <div class="stat"><b id="cntPresent" class="c-ok">0</b><small>Hadir</small></div>
+            <div class="stat"><b id="cntAbsent" class="c-warn">0</b><small>Belum</small></div>
+            <div class="stat"><b id="cntLate" class="c-warn">0</b><small>Lewat</small></div>
+            <div class="stat"><b id="cntTotal">0</b><small>Jumlah</small></div>
           </div>
           <div id="lateByLevel" class="level-stats"></div>
         </div>
@@ -229,12 +228,12 @@
       <section id="tab-reports" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnReports" aria-hidden="true">
         <h1 class="large-title">Laporan Lewat</h1>
         <div class="group pad">
-          <label class="form-row"><span class="form-label">Bulan</span><input type="month" id="reportMonth" /></label>
-          <div class="controls tight"><button id="btnReportRefresh" class="btn btn-primary">Kemaskini laporan</button><button id="btnReportPdf" class="btn">Eksport ke PDF</button></div>
+          <label class="form-row"><span class="form-label">Tarikh</span><input type="date" id="reportDate" /></label>
+          <div class="controls tight"><button id="btnReportRefresh" class="btn btn-primary">Kemaskini laporan</button><button id="btnReportPdf" class="btn">Eksport ke PDF</button><button id="btnReportCsv" class="btn">Eksport CSV</button></div>
         </div>
         <h2 class="section-label">Ringkasan murid</h2>
         <ul id="lateReport" class="list"></ul>
-        <p id="lateReportEmpty" class="empty">Tiada rekod lewat pada bulan dipilih.</p>
+        <p id="lateReportEmpty" class="empty">Tiada rekod lewat pada tarikh dipilih.</p>
       </section>
     </main>
 

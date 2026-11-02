@@ -276,7 +276,7 @@ input[type="range"] { width: 100%; accent-color: var(--blue); height: 28px; }
 .ring-bg { stroke: var(--fill); }
 .ring-fg { stroke: var(--green); stroke-linecap: round; stroke-dasharray: 188.5; stroke-dashoffset: 188.5; transition: stroke-dashoffset .6s cubic-bezier(.3,.9,.3,1); }
 .ring span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
-.stats { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.stats { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
 .stat b { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .stat small { color: var(--text2); font-size: 12px; }
 .c-ok { color: var(--green); }
