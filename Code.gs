@@ -3,7 +3,7 @@
  *
  * Tab yang diurus (dicipta automatik):
  *  - Kehadiran : senarai penuh, satu baris = satu murid pada satu tarikh+sesi (sumber data).
- *  - Jadual    : jadual kehadiran (murid di baris, tarikh di lajur) dengan jumlah dan peratus.
+ *  - Jadual    : jadual murid LEWAT sahaja (murid di baris, tarikh di lajur, sel = masa tiba) dengan jumlah lewat dan kesalahan.
  *                Satu tab bagi setiap kelas, cth "Jadual 5 Anjal". Dibina semula setiap kali hantar.
  *  - Log       : rekod tambah-sahaja (tidak pernah ditimpa) bagi setiap hantaran dan setiap perubahan status.
  *  - Senarai   : (pilihan) Nama di lajur A, Kelas di lajur B, untuk "Dari Sheet" dalam aplikasi.
@@ -122,7 +122,7 @@ function binaSemuaJadual() {
   const last = sh.getLastRow();
   const kelasSet = {};
   if (last > 1) {
-    sh.getRange(2, 3, last - 1, 1).getValues().forEach(function (r) { kelasSet[String(r[0])] = true; });
+    sh.getRange(2, 1, last - 1, HEADERS.length).getValues().forEach(function (r) { if (jadualLewat_(r)) kelasSet[String(r[2])] = true; });
   }
   const senarai = Object.keys(kelasSet);
   if (!senarai.length) {
@@ -160,6 +160,11 @@ function labelTarikh_(iso) {
   return HARI[d.getDay()] + ' ' + p[2] + '/' + p[1];
 }
 
+function jadualLewat_(r) {
+  // Hanya rekod murid yang hadir LEWAT. Baris "Tidak Hadir" lama diabaikan.
+  return r[0] !== '' && String(r[5]) === 'Hadir' && String(r[8]) === 'Lewat';
+}
+
 function binaJadual_(kelas) {
   kelas = String(kelas || '');
   const sumber = getRekodSheet_();
@@ -168,7 +173,7 @@ function binaJadual_(kelas) {
   const data = sumber
     .getRange(2, 1, last - 1, HEADERS.length)
     .getValues()
-    .filter(function (r) { return String(r[2]) === kelas && r[0] !== ''; });
+    .filter(function (r) { return String(r[2]) === kelas && jadualLewat_(r); });
   if (!data.length) return;
 
   const kolMap = {};
@@ -176,6 +181,8 @@ function binaJadual_(kelas) {
   const bil = {};
   const nama = [];
   const sel = {};
+  const kali = {};
+  const salah = {};
 
   data.forEach(function (r) {
     const t = String(r[0]);
@@ -184,46 +191,44 @@ function binaJadual_(kelas) {
     if (!kolMap[k]) { kolMap[k] = true; kols.push({ t: t, s: s, k: k }); }
     const n = String(r[4]);
     const b = Number(r[3]) || 9999;
-    if (!(n in bil)) { bil[n] = b; nama.push(n); } else if (b < bil[n]) { bil[n] = b; }
-    sel[n + '\u0001' + k] = String(r[5]) === 'Hadir' ? HADIR : TIDAK;
+    if (!(n in bil)) { bil[n] = b; nama.push(n); kali[n] = 0; salah[n] = ''; } else if (b < bil[n]) { bil[n] = b; }
+    sel[n + '\u0001' + k] = String(r[6]) || 'Lewat';
+    const kl = Number(r[9]) || 0;
+    if (kl >= kali[n]) { kali[n] = kl; salah[n] = String(r[10] || ''); }
   });
 
   kols.sort(function (a, b) { return a.t < b.t ? -1 : a.t > b.t ? 1 : a.s < b.s ? -1 : a.s > b.s ? 1 : 0; });
   nama.sort(function (a, b) { return bil[a] - bil[b] || a.localeCompare(b); });
 
-  const FIX = 4; // Bil, Nama, Hadir, %
+  const FIX = 4; // Bil, Nama, Jumlah Lewat, Kesalahan
   const N = nama.length;
   const lebar = FIX + kols.length;
   const awal = colLetter_(FIX + 1);
+  const akhir = colLetter_(lebar);
 
   const out = [];
-  // Baris 1: tarikh, baris 2: sesi
-  out.push(['Bil', 'Nama', 'Hadir', '%'].concat(kols.map(function (c) { return labelTarikh_(c.t); })));
+  // Baris 1: tarikh, baris 2: hari/sesi
+  out.push(['Bil', 'Nama', 'Jumlah Lewat', 'Kesalahan'].concat(kols.map(function (c) { return labelTarikh_(c.t); })));
   out.push(['', '', '', ''].concat(kols.map(function (c) { return c.s === '-' ? '' : c.s; })));
 
   const bg = [];
   nama.forEach(function (n, i) {
     const r = i + 3;
-    const baris = [
-      i + 1,
-      n,
-      '=COUNTIF(' + awal + r + ':' + r + ',"' + HADIR + '")',
-      '=IFERROR(C' + r + '/(COUNTIF(' + awal + r + ':' + r + ',"' + HADIR + '")+COUNTIF(' + awal + r + ':' + r + ',"' + TIDAK + '")),"")'
-    ];
+    const baris = [i + 1, n, '=COUNTIF(' + awal + r + ':' + akhir + r + ',"?*")', salah[n]];
     const warna = [];
     kols.forEach(function (c) {
       const v = sel[n + '\u0001' + c.k] || '';
       baris.push(v);
-      warna.push(v === HADIR ? '#d9f2e3' : v === TIDAK ? '#fde2e2' : null);
+      warna.push(v ? '#fde8cf' : null);
     });
     out.push(baris);
     bg.push(warna);
   });
 
-  const foot = ['', 'Jumlah hadir', '', ''];
+  const foot = ['', 'Jumlah murid lewat', '', ''];
   kols.forEach(function (c, i) {
     const L = colLetter_(FIX + 1 + i);
-    foot.push('=COUNTIF(' + L + '3:' + L + (2 + N) + ',"' + HADIR + '")');
+    foot.push('=COUNTIF(' + L + '3:' + L + (2 + N) + ',"?*")');
   });
   out.push(foot);
 
@@ -233,25 +238,30 @@ function binaJadual_(kelas) {
   if (!sh) sh = ss.insertSheet(nm);
   sh.clear();
 
-  sh.getRange(1, 1, 2, lebar).setNumberFormat('@');
+  sh.getRange(1, 1, out.length, lebar).setNumberFormat('@');
   sh.getRange(1, 1, out.length, lebar).setValues(out);
+  // Formula perlu ditetapkan semula kerana format teks
+  sh.getRange(3, 3, N, 1).setNumberFormat('0');
+  sh.getRange(3, 3, N, 1).setFormulas(nama.map(function (n, i) { const r = i + 3; return ['=COUNTIF(' + awal + r + ':' + akhir + r + ',"?*")']; }));
+  if (kols.length) {
+    sh.getRange(out.length, FIX + 1, 1, kols.length).setNumberFormat('0');
+    sh.getRange(out.length, FIX + 1, 1, kols.length).setFormulas([kols.map(function (c, i) { const L = colLetter_(FIX + 1 + i); return '=COUNTIF(' + L + '3:' + L + (2 + N) + ',"?*")'; })]);
+  }
 
   sh.getRange(1, 1, 2, lebar).setFontWeight('bold').setBackground('#e8eefc').setHorizontalAlignment('center');
   sh.getRange(1, 2, 2, 1).setHorizontalAlignment('left');
   sh.getRange(out.length, 1, 1, lebar).setFontWeight('bold').setBackground('#f1f3f4');
-  sh.getRange(3, 4, N, 1).setNumberFormat('0%');
   sh.getRange(3, 3, N, 2).setHorizontalAlignment('center');
   if (kols.length) {
-    const dt = sh.getRange(3, FIX + 1, N, kols.length);
-    dt.setHorizontalAlignment('center').setBackgrounds(bg);
+    sh.getRange(3, FIX + 1, N, kols.length).setHorizontalAlignment('center').setBackgrounds(bg);
     sh.getRange(out.length, FIX + 1, 1, kols.length).setHorizontalAlignment('center');
   }
   sh.setFrozenRows(2);
   sh.setFrozenColumns(2);
   sh.setColumnWidth(1, 40);
   sh.setColumnWidth(2, 240);
-  sh.setColumnWidth(3, 55);
-  sh.setColumnWidth(4, 55);
+  sh.setColumnWidth(3, 90);
+  sh.setColumnWidth(4, 120);
   if (kols.length) sh.setColumnWidths(FIX + 1, kols.length, 78);
 
   // Buang tab "Jadual" panduan (kosong) yang dicipta oleh sediakan() sebelum ada data

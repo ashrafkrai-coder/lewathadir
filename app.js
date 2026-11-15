@@ -851,8 +851,8 @@ async function loadFromSheet() {
 /* ---------------- Eksport & Sheet ---------------- */
 function buildRecords() {
   const rec = attendance[attKey()] || {};
-  return activeStudents().map((s, i) => {
-    const r = rec[s.id];
+  // Hanya murid yang hadir LEWAT direkod. Murid tepat masa / tidak hadir tidak dihantar.
+  return activeStudents().map((s, i) => ({ s, i, r: rec[s.id] })).filter(({ r }) => r && isLate(r.masa)).map(({ s, i, r }) => {
     return {
       bil: i + 1,
       nama: s.nama,
@@ -956,6 +956,10 @@ async function sendToSheet(auto = false) {
     sesi: ($('fSesi').value || '').trim(),
     rekod: buildRecords()
   };
+  if (!payload.rekod.length) {
+    if (!auto) toast('Tiada murid lewat untuk dihantar.', 'err');
+    return;
+  }
   try {
     const res = await fetch(scriptUrl, {
       method: 'POST',
