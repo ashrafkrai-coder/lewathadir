@@ -7,8 +7,8 @@
   <meta name="description" content="Rekod kehadiran murid melalui pengecaman wajah. Data wajah disimpan pada peranti guru sahaja." />
 
   <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#030b09" media="(prefers-color-scheme: dark)" />
+  <meta name="theme-color" content="#eff9f6" media="(prefers-color-scheme: light)" />
   <meta name="color-scheme" content="dark light" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -21,7 +21,7 @@
 <body>
   <div class="app">
     <header class="navbar">
-      <div class="nav-side"><span id="netBadge" class="pill pill-online">Dalam talian</span></div>
+      <div class="nav-side"><span id="netBadge" class="net-light pill-online" role="status" title="Dalam talian" aria-label="Dalam talian"></span></div>
       <div class="nav-title">Hadir Lewat</div>
       <div class="nav-side nav-right"><button id="loginAdminBtn" class="btn-link">Pentadbir</button><button id="logoutBtn" class="btn-link" hidden>Log keluar</button><button id="installBtn" class="btn-link" hidden>Pasang</button></div>
     </header>
@@ -31,17 +31,28 @@
       <section id="tab-scan" class="tab-panel active" role="tabpanel" aria-labelledby="tabBtnScan">
         <h1 class="large-title">Kehadiran</h1>
 
-        <div class="group">
+        <div class="group duo">
           <label class="form-row">
             <span class="form-label">Tarikh</span>
             <input type="date" id="fDate" />
           </label>
           <label class="form-row">
             <span class="form-label">Hari</span>
-            <input type="text" id="fSesi" placeholder="cth: Isnin" maxlength="60" />
+            <select id="fSesi" aria-label="Hari">
+              <option value="">Pilih hari</option>
+              <option value="Isnin">Isnin</option>
+              <option value="Selasa">Selasa</option>
+              <option value="Rabu">Rabu</option>
+              <option value="Khamis">Khamis</option>
+              <option value="Jumaat">Jumaat</option>
+              <option value="Sabtu">Sabtu</option>
+              <option value="Ahad">Ahad</option>
+            </select>
           </label>
         </div>
 
+        <div class="scan-grid">
+        <div class="scan-cam">
         <div class="stage" id="stageScan">
           <video id="vidScan" playsinline muted autoplay></video>
           <canvas id="cvScan"></canvas>
@@ -62,6 +73,8 @@
           <button id="btnFlipScan" class="btn" disabled>Tukar Kamera</button>
         </div>
         <p id="statusScan" class="status-line" role="status">Sedia.</p>
+        </div>
+        <div class="scan-side">
 
         <div class="summary-card">
           <div class="stats">
@@ -71,7 +84,7 @@
         </div>
 
         <h2 class="section-label">Cari murid</h2>
-        <div class="group pad">
+        <div class="group pad search-box">
           <label class="form-row"><span class="form-label">Nama</span><input id="attNameSearch" type="search" placeholder="Taip nama murid" autocomplete="off" /></label>
           <label class="form-row"><span class="form-label">Kelas</span><select id="attClassSearch"><option value="">Semua kelas</option></select></label>
           <p class="muted">Nama disembunyikan sehingga dipadankan oleh wajah atau ditemui melalui carian.</p>
@@ -82,10 +95,12 @@
           <p id="attEmpty" class="empty" hidden>Belum ada murid. Buka tab <strong>Murid</strong> untuk menambah senarai.</p>
         </div>
 
-        <div class="controls">
+        <div class="controls pdf-row">
           <button id="btnPdf" class="btn">Eksport ke PDF</button>
         </div>
         <section id="pdfReport" aria-hidden="true"></section>
+        </div>
+        </div>
       </section>
 
       <!-- ============ TAB MURID ============ -->
@@ -236,6 +251,7 @@
         <ul id="lateReport" class="list"></ul>
         <p id="lateReportEmpty" class="empty">Tiada rekod lewat pada bulan dipilih.</p>
       </section>
+      <footer class="tagline">Developed by ustazashraf v 1.0</footer>
     </main>
 
     <div id="iosHint" class="ios-hint" hidden>

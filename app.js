@@ -584,7 +584,7 @@ function handleScan(results) {
         }
         drawBox(ctx, canvas.width, r.detection.box, mirrored, `✓ ${s.nama}`, '#30d158');
       } else {
-        drawBox(ctx, canvas.width, r.detection.box, mirrored, `${s.nama} (${hitCounter[m.id]}/${settings.hits})`, '#0a84ff');
+        drawBox(ctx, canvas.width, r.detection.box, mirrored, `${s.nama} (${hitCounter[m.id]}/${settings.hits})`, '#2dd4bf');
       }
     } else {
       drawBox(ctx, canvas.width, r.detection.box, mirrored, 'Tidak dikenali', '#ff9f0a');
@@ -1205,7 +1205,9 @@ $('logoutBtn').addEventListener('click', () => {
 /* Rangkaian & pemasangan */
 function updateNet() {
   const on = navigator.onLine;
-  $('netBadge').textContent = on ? 'Dalam talian' : 'Luar talian';
+  const label = on ? 'Dalam talian' : 'Luar talian';
+  $('netBadge').title = label;
+  $('netBadge').setAttribute('aria-label', label);
   $('netBadge').classList.toggle('pill-online', on);
   $('netBadge').classList.toggle('pill-offline', !on);
 }
