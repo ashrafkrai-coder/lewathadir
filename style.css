@@ -728,6 +728,15 @@ textarea, .login-field input { border-radius: 10px; background: var(--surface2);
 .app:not(:has(.tab-btn[data-admin-only]:not([hidden]))) .tabbar { display: none; }
 .app:not(:has(.tab-btn[data-admin-only]:not([hidden]))) { --tab-h: 26px; }
 
+/* Tarikh dan Hari: dua kotak berasingan */
+.group.duo { gap: 8px; background: transparent; border: 0; box-shadow: none; overflow: visible; border-radius: 0; }
+.group.duo .form-row { background: var(--surface); border: 1px solid var(--card-border); border-radius: 12px; }
+.group.duo .form-row + .form-row::before { display: none; }
+.group.duo { grid-template-columns: 1.1fr 0.9fr; }
+.group.duo .form-row { padding: 0 10px; gap: 6px; }
+.group.duo .form-row select { padding: 8px 0 8px 2px; }
+.group.duo .form-label { font-size: 12.5px; }
+
 /* Helaian & toast */
 .sheet { border-radius: 18px; background: var(--surface); background-image: none; }
 .sheet-icon { border-radius: 14px; }
